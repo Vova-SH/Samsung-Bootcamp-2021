@@ -10,18 +10,25 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.RecyclerView
 import com.clean.arch.mvvm.R
 import com.clean.arch.mvvm.data.entities.Movie
+import com.clean.arch.mvvm.ui.adapter.ActorAdapter
 import com.clean.arch.mvvm.utils.BACKDROP_URL
 import com.clean.arch.mvvm.utils.IMAGE_URL
+import com.clean.arch.mvvm.utils.State
 import com.clean.arch.mvvm.utils.startAlphaAnimation
 import com.google.android.material.appbar.AppBarLayout
+import com.google.android.material.snackbar.Snackbar
 import com.squareup.picasso.Picasso
+import org.koin.androidx.viewmodel.ext.android.viewModel
+import org.koin.core.parameter.parametersOf
 import java.text.DecimalFormat
 import kotlin.math.abs
 
 
 class MovieFragment : Fragment(R.layout.movie_fragment) {
 
-    private val movie = Movie.MOCK
+    private val movie by lazy { requireArguments().getSerializable(ARG_MOVIE) as Movie }
+
+    private val viewModel: MovieViewModel by viewModel { parametersOf(movie) }
 
     private lateinit var poster : ImageView
     private lateinit var backdrop : ImageView
@@ -43,6 +50,45 @@ class MovieFragment : Fragment(R.layout.movie_fragment) {
         initToolbar(view)
         initViews(view)
         bindView(movie)
+
+        viewModel.stateMovie.observe(viewLifecycleOwner) {
+            when(it) {
+                is State.Loading -> {
+                    loadingStatus(true)
+                }
+                is State.Error -> {
+                    Snackbar.make(view,
+                        "${it.throwable.message}",
+                        Snackbar.LENGTH_LONG
+                    ).show()
+                }
+                is State.Success -> {
+                    loadingStatus(false)
+                    bindView(it.data)
+                }
+            }
+        }
+
+        viewModel.stateActors.observe(viewLifecycleOwner) {
+            when(it) {
+                is State.Loading -> {
+                    progressBarActors.visibility = View.VISIBLE
+                    recyclerActors.visibility = View.GONE
+                }
+                is State.Error -> {
+                    Snackbar.make(view,
+                        "${it.throwable.message}",
+                        Snackbar.LENGTH_LONG
+                    ).show()
+                }
+                is State.Success -> {
+                    progressBarActors.visibility = View.GONE
+                    recyclerActors.visibility = View.VISIBLE
+
+                    recyclerActors.adapter = ActorAdapter(it.data)
+                }
+            }
+        }
     }
 
     private fun initViews(view: View) {

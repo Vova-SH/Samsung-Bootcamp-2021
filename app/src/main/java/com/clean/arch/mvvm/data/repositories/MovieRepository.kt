@@ -19,4 +19,18 @@ class MovieRepository(
                 pageSize = 20
             )
         ).flow
+
+    suspend fun getMovie(id: Long): Movie {
+        var movie = movieDao.getMovieById(id)
+        if (movie == null) {
+            movie = movieApi.getMovie(id)
+            movieDao.addMovie(movie)
+        }
+        return movie
+    }
+
+    suspend fun getMovieCredits(movieId: Long) : List<Actor> {
+        val credits = movieApi.getMovieCredits(movieId)
+        return credits.cast
+    }
 }
